@@ -310,6 +310,13 @@ const MAX_POLYPHONY = 3;
 let lastHoverSoundTime = 0;
 const HOVER_DEBOUNCE_MS = 80;
 
+function getNoteForHover(instanceId, faceIndex) {
+  // Restore original chromatic mapping for unique notes
+  const baseFreq = 220; // A3
+  const semitoneRatio = Math.pow(2, 1/12);
+  return baseFreq * Math.pow(semitoneRatio, (instanceId * 3 + faceIndex) % 36); // 3 octaves
+}
+
 function playSynth(freq, type, hold) {
   setupSynth();
   resumeSynthContext();
@@ -322,9 +329,9 @@ function playSynth(freq, type, hold) {
   const filter = audioCtx.createBiquadFilter();
   filter.type = 'lowpass';
   filter.frequency.value = 1000;
-  filter.Q.value = 1.2; // gentle resonance for warmth
+  filter.Q.value = 1.2;
   gain.gain.setValueAtTime(0, audioCtx.currentTime);
-  osc.type = type || 'triangle'; // Use selected synth type
+  osc.type = type || 'triangle';
   osc.frequency.value = freq;
   // Gentle vibrato (LFO)
   const lfo = audioCtx.createOscillator();
@@ -345,8 +352,8 @@ function playSynth(freq, type, hold) {
     stopSynth();
     synthActiveOsc = osc;
   }
+  // Linear envelope for smooth attack/release
   if (hold) {
-    // Click: very gentle attack/release
     gain.gain.setValueAtTime(0, audioCtx.currentTime);
     gain.gain.linearRampToValueAtTime(synthVolume * 1.1, audioCtx.currentTime + 0.14);
     gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.38);
@@ -361,7 +368,6 @@ function playSynth(freq, type, hold) {
       if (synthActiveOsc === osc) synthActiveOsc = null;
     };
   } else {
-    // Hover: very gentle attack/release
     gain.gain.setValueAtTime(0, audioCtx.currentTime);
     gain.gain.linearRampToValueAtTime(synthVolume, audioCtx.currentTime + 0.14);
     gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.38);
@@ -492,14 +498,6 @@ window.addEventListener('resize', handleWindowResize, false);
 // --- Instanced Mesh Raycaster for Synth ---
 let lastSynthBox = null;
 let lastSynthFace = null;
-
-function getNoteForHover(instanceId, faceIndex) {
-  // Use both instanceId and faceIndex for more variety
-  const baseFreq = 220; // A3
-  const semitoneRatio = Math.pow(2, 1/12);
-  // Spread notes over 3 octaves, mod 36
-  return baseFreq * Math.pow(semitoneRatio, (instanceId * 3 + faceIndex) % 36);
-}
 
 renderer.domElement.addEventListener('pointermove', (event) => {
   if (!synthEnabled) return;
